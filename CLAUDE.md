@@ -70,3 +70,52 @@ README.md   how to run, short description
 ## Working style
 Propose a plan first. Implement step by step, run tests after each step,
 commit with clear messages. Keep code readable — it will be described in a report.
+Plan order: loader -> evaluation -> SA -> exact DP + instance generator -> experiments.
+After each step: run `python -m unittest` (stdlib unittest, no pytest), then
+commit AND push to GitHub (origin = github.com/kikofers/ttdp-simulated-annealing).
+
+## Implementation decisions (already made — keep consistent)
+Instances (src/instance.py)
+- File format = standard OP format (`Tmax P`, then `x y S` per point; first point
+  start, second point end) with an OPTIONAL 4th column v (visit time, default 0).
+  Same format for classic, generated and Riga instances; save_instance writes it.
+- Internal order: node 0 = start, attractions 1..n-2, node n-1 = end (the loader
+  moves the file's second point to the end).
+- Instance.cost = t' (modified cost) is built once in the loader; all other code
+  treats the problem as a plain OP on t' and never handles visit times itself.
+- Classic files come from https://www.mech.kuleuven.be/en/cib/op (documented in
+  instances/classic/SOURCE.md). Best-known reference scores are NOT added yet —
+  a source must be shown to and approved by the user first.
+
+Evaluation (src/evaluation.py)
+- Objective f = score - LENGTH_WEIGHT * length, LENGTH_WEIGHT = 1e-6 (valid for
+  integer scores and route lengths < 1e6). FEASIBILITY_TOL = 1e-9 vs Tmax.
+- Delta functions only compute the length change; they never modify the route.
+- Hot loops pass cost as a list of lists (inst.cost.tolist()): ~4.5x faster than
+  indexing numpy element by element.
+
+SA (src/sa.py)
+- Acceptance is lexicographic, matching f: delta_f >= 0 -> accept; score loss ->
+  accept with exp(delta_score / T); equal score but longer -> reject. (Plain
+  Metropolis on f would accept nearly all lengthening equal-score moves.)
+- Replace move keeps the same position (O(1) delta).
+- T0 / T_end: the mean sampled score loss is accepted with probability
+  initial_accept = 0.5 / final_accept = 0.001; alpha = (T_end/T0)^(1/iterations).
+- Default 100k iterations (~0.8 s on 64-66 nodes). Larger budgets clearly help
+  (1M: ~8 s); the experiment budget is still to be decided in step 5.
+- CLI: python -m src.sa <instance> --iterations N --seed S
+
+## Error handling conventions (keep for new modules)
+- Invalid instance data -> InstanceError (subclass of ValueError) with file name and
+  line number; validate_instance() checks finiteness, non-negative S and v, v = 0 at
+  start/end, matrix shapes, and that the direct start -> end trip fits in Tmax.
+- Invalid parameters -> ValueError naming the parameter and the allowed range.
+  Solvers call validate_instance() and check their parameters before solving.
+- Never fail silently: delta functions range-check positions (Python would
+  otherwise accept negative indices and return a wrong delta).
+- Final safety net instead of assert (asserts vanish under python -O): a solver
+  re-evaluates its result from scratch and raises RuntimeError if it is infeasible
+  or its tracked score/length disagree.
+- Incrementally tracked values (route length) are resynced periodically.
+- CLIs print `error: <message>` and exit 1 instead of a traceback.
+- Every new failure mode gets a test (tests/test_errors.py).
