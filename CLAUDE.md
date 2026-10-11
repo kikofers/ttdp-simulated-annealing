@@ -119,11 +119,15 @@ SA (src/sa.py)
   Metropolis on f would accept nearly all lengthening equal-score moves.)
 - Replace move keeps the same position (O(1) delta).
 - T0 / T_end: the mean sampled score loss is accepted with probability
-  initial_accept = 0.5 / final_accept = 0.001; alpha = (T_end/T0)^(1/iterations).
-- Default 100k iterations (~0.8 s on 64-66 nodes). Larger budgets clearly help
-  (1M: ~8 s); the experiment budget is still to be decided in step 5. On the
-  classic sets 200k iterations reach 80/89 references; the hardest Chao instances
-  need 1M-3M (Chao 66 Tmax 100 reached by 2 of 4 seeds at 3M).
+  initial_accept = 0.05 / final_accept = 0.001; alpha = (T_end/T0)^(1/iterations).
+  initial_accept was 0.5 until step 5; 0.05 was chosen by the user after
+  experiments/tune_initial_accept.py (results/tuning_initial_accept.md): equal on
+  classic/small, better on large instances (0.5 wastes the first ~40 % of the
+  budget far below the greedy start).
+- CLI default 100k iterations; experiments use 1M (~2.5-3.6 s per run on 21-66
+  nodes) plus 100k for a budget comparison. On the classic sets 200k iterations
+  reach 80/89 references; the hardest Chao instances need 1M-3M (Chao 66 Tmax 100
+  reached by 2 of 4 seeds at 3M, with initial_accept = 0.5).
 - CLI: python -m src.sa <instance> --iterations N --seed S
 
 Exact DP (src/exact_dp.py)
@@ -138,9 +142,37 @@ Generated instances (src/generate.py, run: python -m src.generate)
 - visit_small: n in {10,...,20} (step 2), ratio {0.3, 0.5}, 100x100 area, scores 1-100,
   round trip from a hotel, seed = n. References: instances/visit_small/references.csv.
 - visit_large: Chao 64/66 coordinates x10 (so travel ~ visit time scale) and
-  original scores, ratio {0.3, 0.6}, seed = 64/66. Reference = best of long SA runs
-  (step 5).
+  original scores, ratio {0.3, 0.6}, seed = 64/66. References
+  (instances/visit_large/references.csv, type best-known): best of 10 SA runs x 10M
+  iterations, seeds 1000-1009 (disjoint from experiment seeds 0-9), computed with
+  initial_accept = 0.5 by experiments/large_references.py: 744, 1140, 775, 1375.
 - Each folder has manifest.csv; tests check committed files == regenerated ones.
+- All references.csv files share the columns instance, reference, type, source
+  (classic adds Tmax; generated groups add length, route).
+
+Experiments (step 5)
+- experiments/run_all.py: 33 instances (17 classic from selection.csv, 12
+  visit_small, 4 visit_large) x 10 seeds (0-9) x budgets {1M (main), 100k}.
+  Run SERIALLY (--workers 1) so measured runtimes are not distorted (17.2 min). Outputs
+  results/runs.csv, results/results.csv, results/summary.md (gap % =
+  (ref - score) / ref * 100, hits = runs reaching the reference, exact DP runtime
+  for visit_small).
+- experiments/plot_convergence.py: results/convergence.png (+ .csv table view) on
+  visit_large/large_chao66_r30, seed 0, 1M iterations: score panel (current, best,
+  reference) and a separate temperature panel (log scale) — never a dual axis.
+- Do not start more long runs unless the user asks: everything required is
+  produced by the runs above.
+
+## Scope decisions (user, step 5)
+- NOT done, by decision (no time): visit_large instances above 66 nodes (spec says
+  50-100+), the optional Riga instance, the optional TSPLIB-based OP benchmarks.
+  Mention the 64-66 node upper limit honestly in the report.
+- visit_small goes up to 20 nodes (spec: ~10-16), approved in step 4: the 10-16
+  node instances were too easy (greedy optimal on 5 of 8), and the DP still solves
+  18 attractions in seconds.
+- Remaining after the code: the final report (Latvian, 2-3 pages) — problem
+  statement; algorithm with subsections domain / evaluation / move / algorithm;
+  testing description; repo link.
 
 ## Error handling conventions (keep for new modules)
 - Invalid instance data -> InstanceError (subclass of ValueError) with file name and

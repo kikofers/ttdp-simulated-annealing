@@ -1,5 +1,6 @@
 """Invalid input must fail loudly with a clear message, never silently."""
 
+import os
 import subprocess
 import sys
 import tempfile
@@ -166,6 +167,17 @@ class TestCommandLine(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertTrue(result.stderr.startswith("error:"))
         self.assertNotIn("Traceback", result.stderr)
+
+    def test_non_ascii_output_path_on_cp1252_console(self):
+        """The repository path contains 'Ģ'; printing it must not crash a cp1252 console."""
+        with tempfile.TemporaryDirectory(suffix="_MAĢ") as tmp:
+            out = Path(tmp) / "plot.png"
+            result = subprocess.run(
+                [sys.executable, "-m", "experiments.plot_convergence", "--iterations", "1000",
+                 "--out", str(out)],
+                cwd=ROOT, capture_output=True, env={**os.environ, "PYTHONIOENCODING": "cp1252"})
+            self.assertEqual(result.returncode, 0, result.stderr.decode("cp1252", "replace"))
+            self.assertTrue(out.exists())
 
     def test_invalid_iterations_gives_clean_error(self):
         f = ROOT / "instances" / "classic" / "TsiligiridesOP2" / "tsiligirides_problem_2_budget_15.txt"

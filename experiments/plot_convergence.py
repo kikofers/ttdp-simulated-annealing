@@ -34,6 +34,14 @@ BEST = "#2a78d6"
 CURRENT = "#eb6834"
 
 
+def shown(path):
+    """Path for console output: relative to the repository when possible. The
+    repository path contains non-ASCII letters (e.g. "Ģ") that a cp1252 console
+    cannot encode."""
+    path = Path(path).resolve()
+    return path.relative_to(ROOT) if path.is_relative_to(ROOT) else path
+
+
 def reference_of(instance):
     """Reference value and type for 'group/name' from the group's references CSV."""
     group, name = instance.split("/", 1)
@@ -62,6 +70,7 @@ def main():
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--out", type=Path, default=ROOT / "results" / "convergence.png")
     args = parser.parse_args()
+    sys.stdout.reconfigure(errors="backslashreplace")
     if args.iterations < POINTS:
         sys.exit(f"error: --iterations must be at least {POINTS}")
 
@@ -91,7 +100,8 @@ def main():
 
     ax_score.plot(its, current, color=CURRENT, linewidth=1.0, label="current solution")
     ax_score.plot(its, best, color=BEST, linewidth=2.0, label="best so far")
-    ax_score.axhline(reference, color=TEXT_SECONDARY, linewidth=1.0, linestyle=(0, (4, 3)))
+    ax_score.hlines(reference, its[0], its[-1], color=TEXT_SECONDARY, linewidth=1.0,
+                    linestyle=(0, (4, 3)))
     ax_score.text(its[0], reference, f"reference {reference:g} ({ref_type})",
                   color=TEXT_SECONDARY, fontsize=9, ha="left", va="bottom")
     ax_score.text(its[-1], best[-1], f"  best {best[-1]:g}", color=TEXT, fontsize=9,
@@ -115,7 +125,7 @@ def main():
     fig.tight_layout()
     fig.savefig(args.out, dpi=200, facecolor=SURFACE)
     print(f"greedy {res.initial_score:g} -> best {res.score:g} (reference {reference:g}); "
-          f"T0 = {res.t0:.3g}, T_end = {temps[-1]:.3g}; saved {args.out}")
+          f"T0 = {res.t0:.3g}, T_end = {temps[-1]:.3g}; saved {shown(args.out)}")
     if not math.isclose(best[-1], res.score):
         print("note: last history sample precedes the final best update")
 

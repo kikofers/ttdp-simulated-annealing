@@ -37,6 +37,14 @@ INSTANCES = ROOT / "instances"
 GROUPS = ("classic", "visit_small", "visit_large")
 
 
+def shown(path):
+    """Path for console output: relative to the repository when possible. The
+    repository path contains non-ASCII letters (e.g. "Ģ") that a cp1252 console
+    cannot encode."""
+    path = Path(path).resolve()
+    return path.relative_to(ROOT) if path.is_relative_to(ROOT) else path
+
+
 def gap(reference, score):
     """Relative gap in percent; negative if the score beats the reference."""
     if reference <= 0:
@@ -179,6 +187,7 @@ def main():
     parser.add_argument("--workers", type=int, default=1)
     parser.add_argument("--out", type=Path, default=ROOT / "results")
     args = parser.parse_args()
+    sys.stdout.reconfigure(errors="backslashreplace")
     if args.runs < 1 or args.workers < 1 or min(args.iterations) < 1:
         sys.exit("error: --runs, --workers and --iterations must be positive")
 
@@ -210,7 +219,7 @@ def main():
     above = [r["instance"] for r in results if r["above_reference"]]
     if above:
         print(f"NOTE: runs above the reference on {above} (reference is not optimal there)")
-    print(f"done in {total_time / 60:.1f} min -> {args.out}")
+    print(f"done in {total_time / 60:.1f} min -> {shown(args.out)}")
 
 
 if __name__ == "__main__":
