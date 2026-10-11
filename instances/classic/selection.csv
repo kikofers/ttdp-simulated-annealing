@@ -1,0 +1,18 @@
+instance,Tmax,reference,share_of_total_score,note
+TsiligiridesOP1/tsiligirides_problem_1_budget_20,20,65,0.23,
+TsiligiridesOP1/tsiligirides_problem_1_budget_40,40,155,0.54,
+TsiligiridesOP1/tsiligirides_problem_1_budget_60,60,225,0.79,
+TsiligiridesOP2/tsiligirides_problem_2_budget_15,15,120,0.27,
+TsiligiridesOP2/tsiligirides_problem_2_budget_25,25,230,0.51,
+TsiligiridesOP2/tsiligirides_problem_2_budget_35,35,320,0.71,
+TsiligiridesOP3/tsiligirides_problem_3_budget_020,20,200,0.25,
+TsiligiridesOP3/tsiligirides_problem_3_budget_040,40,430,0.54,
+TsiligiridesOP3/tsiligirides_problem_3_budget_070,70,640,0.80,
+ChaoOP64/set_64_1_20,20,294,0.22,
+ChaoOP64/set_64_1_40,40,714,0.53,
+ChaoOP64/set_64_1_55,55,984,0.73,hard for published heuristics
+ChaoOP64/set_64_1_70,70,1188,0.88,
+ChaoOP66/set_66_1_030,30,400,0.24,
+ChaoOP66/set_66_1_060,60,915,0.54,
+ChaoOP66/set_66_1_090,90,1340,0.80,
+ChaoOP66/set_66_1_110,110,1560,0.93,hard for published heuristics

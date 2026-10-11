@@ -1,3 +1,4 @@
+import csv
 import random
 import re
 import tempfile
@@ -48,6 +49,42 @@ class TestClassicInstances(unittest.TestCase):
     def test_without_visit_times_cost_equals_distance(self):
         inst = load_instance(CLASSIC / "ChaoOP64" / "set_64_1_15.txt")
         np.testing.assert_allclose(inst.cost, inst.dist)
+
+    def test_set1_is_the_original_version(self):
+        # The corrected set 1 moves (4.9, 18.9) to (4.9, 14.9); references are for the original.
+        inst = load_instance(CLASSIC / "TsiligiridesOP1" / "tsiligirides_problem_1_budget_05.txt")
+        points = set(zip(inst.x.tolist(), inst.y.tolist()))
+        self.assertIn((4.9, 18.9), points)
+        self.assertNotIn((4.9, 14.9), points)
+
+
+class TestClassicReferences(unittest.TestCase):
+    def test_one_row_per_file_with_matching_tmax(self):
+        with open(CLASSIC / "references.csv", encoding="utf-8") as f:
+            rows = list(csv.DictReader(f))
+        self.assertEqual(list(rows[0]), ["instance", "Tmax", "reference", "type", "source"])
+        files = {f"{p.parent.name}/{p.stem}" for s in CLASSIC_SETS for p in (CLASSIC / s).glob("*.txt")}
+        self.assertEqual({r["instance"] for r in rows}, files)
+        self.assertEqual(len(rows), len(files))
+        for r in rows:
+            with self.subTest(instance=r["instance"]):
+                inst = load_instance(CLASSIC / f"{r['instance']}.txt")
+                self.assertEqual(float(r["Tmax"]), inst.tmax)
+                self.assertIn(r["type"], ("optimal", "best-known"))
+                self.assertTrue(r["source"].strip())
+                self.assertTrue(0 <= float(r["reference"]) <= inst.score.sum())
+
+    def test_selection_matches_references(self):
+        with open(CLASSIC / "references.csv", encoding="utf-8") as f:
+            refs = {r["instance"]: r for r in csv.DictReader(f)}
+        with open(CLASSIC / "selection.csv", encoding="utf-8") as f:
+            selection = list(csv.DictReader(f))
+        self.assertEqual(len(selection), 17)
+        for row in selection:
+            with self.subTest(instance=row["instance"]):
+                self.assertIn(row["instance"], refs)
+                self.assertEqual(row["Tmax"], refs[row["instance"]]["Tmax"])
+                self.assertEqual(float(row["reference"]), float(refs[row["instance"]]["reference"]))
 
 
 class TestCostMatrix(unittest.TestCase):

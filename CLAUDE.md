@@ -10,6 +10,9 @@ University assignment. Approved by professor. Do NOT extend the problem (no time
 - Test on several instance sizes; record runtime and solution quality compared to the
   optimal or best-known solution.
 - Repository must contain code, test instances, and experiment results.
+- Final deliverable (written later, in Latvian, 2-3 pages): problem statement;
+  algorithm description with subsections domain / evaluation / move / algorithm;
+  testing description; repo link. Keep code and results easy to describe.
 
 ## Problem
 Nodes 0..n-1. Node 0 = start, node n-1 = end (e.g. hotel). Each node i has score S_i
@@ -40,17 +43,22 @@ Feasible up to ~15-18 intermediate nodes. This is only for obtaining reference
 optima, not the optimization method itself.
 
 ## Test instances (three groups)
-1. Classic benchmarks with v = 0 (Tsiligirides and Chao sets, standard OP format —
-   verify the file format from the source; usually first line Tmax and number of
-   paths, then "x y score" lines, first point = start, second = end).
-   Compare to published best-known scores. Record each reference value with its
-   source in a CSV. NEVER invent reference values — if unsure, ask me.
-2. Small generated instances with visit times (~10-16 nodes), fixed seeds.
+1. classic/ — published OP benchmarks, v = 0 (special case of our problem):
+   - Tsiligirides sets 1, 2, 3 (~21-33 nodes) and Chao sets (64 and 66 nodes).
+   - Each set has many Tmax values: use ~3-4 per set (small/medium/large budget).
+   - Optional: a few larger TSPLIB-based OP instances (Fischetti,
+     Salazar-Gonzalez, Toth 1998) with published optima.
+   - Reference values: take ALL from one reliable source, store in
+     instances/classic/references.csv with columns: instance, Tmax, reference,
+     type (optimal/best-known), source. Verify file format and distance
+     convention from the source. NEVER invent reference values — if a value
+     cannot be confirmed, ask me.
+2. visit_small/ — generated, ~10-16 nodes, visit times 5-60, fixed seeds.
    Reference = exact DP optimum.
-3. Larger instances with visit times (50-100 nodes, based on Chao coordinates +
-   generated visit times 5-60, fixed seeds). Choose Tmax so the problem is
-   non-trivial. Reference = best result over many long SA runs (best known).
-Optional: small hand-made Riga instance (~25 attractions, realistic visit times).
+3. visit_large/ — generated, 50-100+ nodes (e.g. Chao/TSPLIB coordinates +
+   generated visit times), fixed seeds, Tmax chosen so the problem is
+   non-trivial. Reference = best result over many long SA runs (best known);
+   label it as such.
 
 ## Experiments
 - Each instance: 10 runs with different seeds.
@@ -73,6 +81,7 @@ commit with clear messages. Keep code readable — it will be described in a rep
 Plan order: loader -> evaluation -> SA -> exact DP + instance generator -> experiments.
 After each step: run `python -m unittest` (stdlib unittest, no pytest), then
 commit AND push to GitHub (origin = github.com/kikofers/ttdp-simulated-annealing).
+Ask before big design changes.
 
 ## Implementation decisions (already made — keep consistent)
 Instances (src/instance.py)
@@ -84,8 +93,18 @@ Instances (src/instance.py)
 - Instance.cost = t' (modified cost) is built once in the loader; all other code
   treats the problem as a plain OP on t' and never handles visit times itself.
 - Classic files come from https://www.mech.kuleuven.be/en/cib/op (documented in
-  instances/classic/SOURCE.md). Best-known reference scores are NOT added yet —
-  a source must be shown to and approved by the user first.
+  instances/classic/SOURCE.md). TsiligiridesOP1 is the ORIGINAL set 1 (point
+  (4.9, 18.9)), not the corrected "set 4" used by some papers.
+- Classic references (APPROVED by the user): instances/classic/references.csv, all
+  89 values from ONE source, Szwarc & Boryczka (2022), PLoS ONE 17(2): e0264584,
+  column "Best" of Tables 1, 2, 3, 5, 6 (pp. 12-14); type = best-known for all.
+- Distance convention verified: unrounded Euclidean (our code) reaches all 89
+  references and never exceeds one; nint/floor/ceil contradict them
+  (results/distance_convention/, experiments/check_distance_convention.py).
+- Classic instances used in experiments (APPROVED): instances/classic/selection.csv,
+  17 instances: Tsiligirides 1: Tmax 20/40/60, set 2: 15/25/35, set 3: 20/40/70,
+  Chao 64: 20/40/55/70, Chao 66: 30/60/90/110 (~25/50/75 % of total score + one
+  instance per Chao set that published heuristics found hard).
 
 Evaluation (src/evaluation.py)
 - Objective f = score - LENGTH_WEIGHT * length, LENGTH_WEIGHT = 1e-6 (valid for
@@ -102,7 +121,9 @@ SA (src/sa.py)
 - T0 / T_end: the mean sampled score loss is accepted with probability
   initial_accept = 0.5 / final_accept = 0.001; alpha = (T_end/T0)^(1/iterations).
 - Default 100k iterations (~0.8 s on 64-66 nodes). Larger budgets clearly help
-  (1M: ~8 s); the experiment budget is still to be decided in step 5.
+  (1M: ~8 s); the experiment budget is still to be decided in step 5. On the
+  classic sets 200k iterations reach 80/89 references; the hardest Chao instances
+  need 1M-3M (Chao 66 Tmax 100 reached by 2 of 4 seeds at 3M).
 - CLI: python -m src.sa <instance> --iterations N --seed S
 
 Exact DP (src/exact_dp.py)

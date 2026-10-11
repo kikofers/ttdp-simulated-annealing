@@ -1,0 +1,10 @@
+ChaoOP64/set_64_1_35                             ref=   576 best=   576 slack=0.139238 runs=[570.0, 570.0, 552.0, 576.0, 576.0] equal
+ChaoOP64/set_64_1_45                             ref=   816 best=   816 slack=0.573593 runs=[816.0, 816.0, 816.0, 816.0, 816.0] equal
+ChaoOP64/set_64_1_50                             ref=   900 best=   900 slack=0.168675 runs=[900.0, 900.0, 900.0, 900.0, 900.0] equal
+ChaoOP64/set_64_1_55                             ref=   984 best=   984 slack=0.088312 runs=[984.0, 978.0, 984.0, 978.0, 978.0] equal
+ChaoOP64/set_64_1_60                             ref=  1062 best=  1062 slack=0.603030 runs=[1044.0, 1062.0, 1062.0, 1062.0, 1062.0] equal
+ChaoOP64/set_64_1_80                             ref=  1284 best=  1284 slack=0.804041 runs=[1284.0, 1284.0, 1284.0, 1284.0, 1278.0] equal
+ChaoOP66/set_66_1_050                            ref=   730 best=   730 slack=0.189384 runs=[730.0, 720.0, 730.0, 710.0, 730.0] equal
+ChaoOP66/set_66_1_100                            ref=  1465 best=  1455 slack=0.189384 runs=[1445.0, 1455.0, 1455.0, 1455.0, 1455.0] below
+ChaoOP66/set_66_1_110                            ref=  1560 best=  1560 slack=0.189384 runs=[1550.0, 1550.0, 1560.0, 1550.0, 1560.0] equal
+SUMMARY euclid: equal=8 below=1 ABOVE=0 of 9

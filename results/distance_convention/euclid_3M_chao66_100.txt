@@ -1,0 +1,5 @@
+ChaoOP66/set_66_1_100, ref = 1465, simulated_annealing(iterations=3_000_000), slack = Tmax - length
+seed 11 1465.0 slack 0.189384
+seed 12 1445.0 slack 0.250763
+seed 13 1455.0 slack 0.189384
+seed 14 1465.0 slack 0.189384
