@@ -31,7 +31,7 @@ from src.instance import load_instance, make_instance, save_instance
 
 ROOT = Path(__file__).resolve().parent.parent
 
-SMALL_SIZES = (10, 12, 14, 16)
+SMALL_SIZES = (10, 12, 14, 16, 18, 20)
 SMALL_RATIOS = (0.3, 0.5)
 SMALL_AREA = 100.0
 SMALL_SCORE_RANGE = (1, 100)

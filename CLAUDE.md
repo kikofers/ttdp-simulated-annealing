@@ -114,7 +114,7 @@ Exact DP (src/exact_dp.py)
 Generated instances (src/generate.py, run: python -m src.generate)
 - Units = minutes; visit times integer 5-60; Tmax = round(ratio * T_all), T_all =
   nearest-neighbour route through all attractions under t'.
-- visit_small: n in {10,12,14,16}, ratio {0.3, 0.5}, 100x100 area, scores 1-100,
+- visit_small: n in {10,...,20} (step 2), ratio {0.3, 0.5}, 100x100 area, scores 1-100,
   round trip from a hotel, seed = n. References: instances/visit_small/references.csv.
 - visit_large: Chao 64/66 coordinates x10 (so travel ~ visit time scale) and
   original scores, ratio {0.3, 0.6}, seed = 64/66. Reference = best of long SA runs

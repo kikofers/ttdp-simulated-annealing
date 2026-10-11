@@ -7,3 +7,7 @@ small_n14_r30,301,"exact optimum, bitmask DP (src/exact_dp.py)",232.779929,0 11 
 small_n14_r50,427,"exact optimum, bitmask DP (src/exact_dp.py)",397.486578,0 11 12 6 2 10 5 8 13
 small_n16_r30,294,"exact optimum, bitmask DP (src/exact_dp.py)",251.688261,0 13 3 5 1 15
 small_n16_r50,453,"exact optimum, bitmask DP (src/exact_dp.py)",408.119709,0 2 13 3 10 4 12 5 1 15
+small_n18_r30,349,"exact optimum, bitmask DP (src/exact_dp.py)",279.323539,0 12 8 4 1 14 10 17
+small_n18_r50,542,"exact optimum, bitmask DP (src/exact_dp.py)",472.266917,0 12 8 4 1 2 9 6 14 10 17
+small_n20_r30,413,"exact optimum, bitmask DP (src/exact_dp.py)",324.621331,0 18 4 16 13 10 19
+small_n20_r50,717,"exact optimum, bitmask DP (src/exact_dp.py)",542.658409,0 9 18 4 16 13 12 14 10 5 19
