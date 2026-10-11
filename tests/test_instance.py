@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np
 
 from src.instance import load_instance, make_instance, save_instance
+from tests.helpers import random_instance, random_route
 
 ROOT = Path(__file__).resolve().parent.parent
 CLASSIC = ROOT / "instances" / "classic"
@@ -19,15 +20,6 @@ CLASSIC_SETS = {
     "ChaoOP64": (14, 64),
     "ChaoOP66": (26, 66),
 }
-
-
-def random_instance(n, seed):
-    rng = np.random.default_rng(seed)
-    visit = rng.uniform(5, 60, n)
-    visit[0] = visit[-1] = 0
-    score = rng.integers(1, 10, n)
-    score[0] = score[-1] = 0
-    return make_instance("random", 500, rng.uniform(0, 100, n), rng.uniform(0, 100, n), score, visit)
 
 
 class TestClassicInstances(unittest.TestCase):
@@ -70,8 +62,7 @@ class TestCostMatrix(unittest.TestCase):
         inst = random_instance(15, seed=2)
         rng = random.Random(3)
         for _ in range(100):
-            middle = rng.sample(range(1, inst.end), rng.randint(0, inst.n - 2))
-            route = [inst.start] + middle + [inst.end]
+            route = random_route(inst, rng)
             edges = list(zip(route, route[1:]))
             modified = sum(inst.cost[i, j] for i, j in edges)
             direct = sum(inst.dist[i, j] for i, j in edges) + sum(inst.visit[i] for i in route)
