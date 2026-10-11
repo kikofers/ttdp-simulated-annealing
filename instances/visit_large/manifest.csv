@@ -1,0 +1,5 @@
+instance,n,attractions,tmax,seed,total_score,total_visit_time
+large_chao64_r30,64,62,954,64,1344,1980
+large_chao64_r60,64,62,1909,64,1344,1980
+large_chao66_r30,66,64,1098,66,1680,2090
+large_chao66_r60,66,64,2196,66,1680,2090

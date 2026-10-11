@@ -1,0 +1,9 @@
+instance,n,attractions,tmax,seed,total_score,total_visit_time
+small_n10_r30,10,8,181,10,462,287
+small_n10_r50,10,8,301,10,462,287
+small_n12_r30,12,10,195,12,342,312
+small_n12_r50,12,10,325,12,342,312
+small_n14_r30,14,12,242,14,584,474
+small_n14_r50,14,12,403,14,584,474
+small_n16_r30,16,14,259,16,576,455
+small_n16_r50,16,14,432,16,576,455

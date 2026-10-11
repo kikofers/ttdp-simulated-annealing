@@ -105,6 +105,22 @@ SA (src/sa.py)
   (1M: ~8 s); the experiment budget is still to be decided in step 5.
 - CLI: python -m src.sa <instance> --iterations N --seed S
 
+Exact DP (src/exact_dp.py)
+- Pure Python bitmask DP with pruning of states that cannot reach the end within
+  Tmax (valid because t' satisfies the triangle inequality). Limit 18 attractions;
+  ~1 s at 16, ~5 s at 18 attractions. Verified against brute force.
+- CLI: python -m src.exact_dp <files> --csv out.csv
+
+Generated instances (src/generate.py, run: python -m src.generate)
+- Units = minutes; visit times integer 5-60; Tmax = round(ratio * T_all), T_all =
+  nearest-neighbour route through all attractions under t'.
+- visit_small: n in {10,12,14,16}, ratio {0.3, 0.5}, 100x100 area, scores 1-100,
+  round trip from a hotel, seed = n. References: instances/visit_small/references.csv.
+- visit_large: Chao 64/66 coordinates x10 (so travel ~ visit time scale) and
+  original scores, ratio {0.3, 0.6}, seed = 64/66. Reference = best of long SA runs
+  (step 5).
+- Each folder has manifest.csv; tests check committed files == regenerated ones.
+
 ## Error handling conventions (keep for new modules)
 - Invalid instance data -> InstanceError (subclass of ValueError) with file name and
   line number; validate_instance() checks finiteness, non-negative S and v, v = 0 at

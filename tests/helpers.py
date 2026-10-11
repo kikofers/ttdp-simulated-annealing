@@ -1,7 +1,9 @@
+import itertools
 import random
 
 import numpy as np
 
+from src.evaluation import objective, route_length, route_score
 from src.instance import make_instance
 
 
@@ -19,3 +21,18 @@ def random_route(inst, rng, min_size=0):
     """Random route start -> random subset of attractions in random order -> end."""
     k = rng.randint(min_size, inst.n - 2)
     return [inst.start] + rng.sample(range(1, inst.end), k) + [inst.end]
+
+
+def brute_force_best(inst):
+    """(score, length) of the best route over every subset in every order; tiny n only."""
+    cost = inst.cost.tolist()
+    best = (route_score(inst.score, [inst.start, inst.end]), cost[inst.start][inst.end])
+    for k in range(1, inst.n - 1):
+        for perm in itertools.permutations(range(1, inst.end), k):
+            route = [inst.start, *perm, inst.end]
+            length = route_length(cost, route)
+            if length <= inst.tmax:
+                candidate = (route_score(inst.score, route), length)
+                if objective(*candidate) > objective(*best):
+                    best = candidate
+    return best

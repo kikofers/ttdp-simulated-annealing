@@ -1,4 +1,3 @@
-import itertools
 import random
 import unittest
 from pathlib import Path
@@ -6,7 +5,7 @@ from pathlib import Path
 from src.evaluation import route_errors, route_length, route_score
 from src.instance import load_instance
 from src.sa import _NodePool, greedy_initial, simulated_annealing
-from tests.helpers import random_instance
+from tests.helpers import brute_force_best, random_instance
 
 CLASSIC = Path(__file__).resolve().parent.parent / "instances" / "classic"
 SAMPLE_FILES = [
@@ -14,19 +13,6 @@ SAMPLE_FILES = [
     CLASSIC / "TsiligiridesOP2" / "tsiligirides_problem_2_budget_25.txt",
     CLASSIC / "ChaoOP66" / "set_66_1_050.txt",
 ]
-
-
-def brute_force_best_score(inst):
-    """Best score over all routes (every subset in every order); tiny n only."""
-    cost = inst.cost.tolist()
-    attractions = range(1, inst.end)
-    best = 0
-    for k in range(1, len(attractions) + 1):
-        for perm in itertools.permutations(attractions, k):
-            route = [inst.start, *perm, inst.end]
-            if route_length(cost, route) <= inst.tmax:
-                best = max(best, route_score(inst.score, route))
-    return best
 
 
 class TestGreedy(unittest.TestCase):
@@ -66,7 +52,7 @@ class TestSimulatedAnnealing(unittest.TestCase):
             inst = random_instance(8, seed=seed, tmax=200)
             with self.subTest(seed=seed):
                 res = simulated_annealing(inst, iterations=20_000, seed=seed)
-                self.assertEqual(res.score, brute_force_best_score(inst))
+                self.assertEqual(res.score, brute_force_best(inst)[0])
 
     def test_nothing_fits(self):
         inst = random_instance(10, seed=0, tmax=500)
