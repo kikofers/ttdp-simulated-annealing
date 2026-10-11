@@ -22,8 +22,12 @@ into a random walk and wasting the time budget.
 
 Cooling: geometric, T <- alpha * T after every iteration. The initial and
 final temperatures are set so that the average sampled score loss is
-accepted with probability initial_accept and final_accept respectively;
+accepted with probability initial_accept (default 0.05) and final_accept
+(default 0.001) respectively;
 alpha = (T_end / T0) ** (1 / iterations) makes cooling span the budget.
+initial_accept = 0.05 was chosen with experiments/tune_initial_accept.py
+(results/tuning_initial_accept.md): with 0.5 the first ~40 % of the budget is
+spent far below the greedy start, and large instances end ~1 % lower.
 
 Error handling: parameters and the instance are validated before solving
 (ValueError / InstanceError with a clear message). The route length is
@@ -162,7 +166,7 @@ def check_parameters(iterations, initial_accept, final_accept, move_weights, his
         raise ValueError(f"history_every must be a non-negative integer, got {history_every!r}")
 
 
-def simulated_annealing(inst, iterations=100_000, seed=0, initial_accept=0.5,
+def simulated_annealing(inst, iterations=100_000, seed=0, initial_accept=0.05,
                         final_accept=0.001, move_weights=(1, 1, 1, 1), history_every=0):
     """Run SA on `inst` and return the best solution found (SAResult).
 

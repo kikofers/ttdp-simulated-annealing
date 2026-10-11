@@ -159,7 +159,7 @@ def main():
             res = solve_exact(inst)
             print(f"{inst.name:24} n={inst.n:3} optimum={res.score:g} length={res.length:.3f} "
                   f"visited={len(res.route) - 2}/{inst.n - 2} time={res.runtime:.2f}s")
-            rows.append({"instance": inst.name, "reference": f"{res.score:g}",
+            rows.append({"instance": inst.name, "reference": f"{res.score:g}", "type": "optimal",
                          "source": "exact optimum, bitmask DP (src/exact_dp.py)",
                          "length": f"{res.length:.6f}", "route": " ".join(map(str, res.route))})
     except (OSError, ValueError) as e:  # InstanceError is a ValueError
