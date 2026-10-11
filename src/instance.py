@@ -16,10 +16,13 @@ Internally the points are reordered so that node 0 is the start and node n-1
 is the end; nodes 1..n-2 are the attractions.
 """
 
+import math
 from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
+
+from src.evaluation import FEASIBILITY_TOL
 
 
 @dataclass
@@ -64,50 +67,125 @@ def build_cost_matrix(dist, visit):
     return cost
 
 
+class InstanceError(ValueError):
+    """Invalid instance file or instance data (the message says what and where)."""
+
+
+def validate_instance(inst):
+    """Check that `inst` describes a meaningful TTDP instance.
+
+    Called when an instance is created and again before solving, so that a
+    corrupted or hand-modified instance fails with a clear message instead of
+    producing wrong results.
+    """
+    n = inst.n
+    for attr in ("x", "y", "score", "visit"):
+        values = getattr(inst, attr)
+        if values.shape != (n,):
+            raise InstanceError(f"{inst.name}: {attr} has shape {values.shape}, expected ({n},)")
+        bad = np.flatnonzero(~np.isfinite(values))
+        if bad.size:
+            raise InstanceError(f"{inst.name}: {attr} of node {bad[0]} is not a finite number")
+    if n < 2:
+        raise InstanceError(f"{inst.name}: need at least a start and an end point")
+    if not np.isfinite(inst.tmax):
+        raise InstanceError(f"{inst.name}: Tmax must be a finite number, got {inst.tmax}")
+    for attr in ("score", "visit"):
+        bad = np.flatnonzero(getattr(inst, attr) < 0)
+        if bad.size:
+            raise InstanceError(f"{inst.name}: node {bad[0]} has negative {attr}")
+    if inst.visit[inst.start] != 0 or inst.visit[inst.end] != 0:
+        raise InstanceError(f"{inst.name}: start and end must have visit time 0")
+    for attr in ("dist", "cost"):
+        matrix = getattr(inst, attr)
+        if matrix.shape != (n, n) or not np.all(np.isfinite(matrix)):
+            raise InstanceError(f"{inst.name}: {attr} matrix must be finite with shape ({n}, {n})")
+    direct = inst.cost[inst.start, inst.end]
+    if direct > inst.tmax + FEASIBILITY_TOL:
+        raise InstanceError(f"{inst.name}: no feasible route, the direct trip start -> end "
+                            f"takes {direct:.6g} > Tmax = {inst.tmax:g}")
+
+
 def make_instance(name, tmax, x, y, score, visit):
-    """Build an Instance from arrays already in internal order (start..end)."""
-    x = np.asarray(x, dtype=float)
-    y = np.asarray(y, dtype=float)
-    score = np.asarray(score, dtype=float)
-    visit = np.asarray(visit, dtype=float)
+    """Build and validate an Instance from arrays already in internal order (start..end)."""
+    arrays = {}
+    for attr, values in (("x", x), ("y", y), ("score", score), ("visit", visit)):
+        try:
+            arrays[attr] = np.asarray(values, dtype=float)
+        except (TypeError, ValueError):
+            raise InstanceError(f"{name}: {attr} must contain only numbers") from None
+        if arrays[attr].ndim != 1:
+            raise InstanceError(f"{name}: {attr} must be a one-dimensional sequence")
+    lengths = {len(a) for a in arrays.values()}
+    if len(lengths) != 1:
+        raise InstanceError(f"{name}: coordinate/score/visit arrays differ in length")
+    x, y, score, visit = arrays["x"], arrays["y"], arrays["score"], arrays["visit"]
 
-    if not (len(x) == len(y) == len(score) == len(visit)):
-        raise ValueError(f"{name}: coordinate/score/visit arrays differ in length")
-    if len(x) < 2:
-        raise ValueError(f"{name}: need at least a start and an end point")
-    if np.any(visit < 0):
-        raise ValueError(f"{name}: negative visit time")
-    if visit[0] != 0 or visit[-1] != 0:
-        raise ValueError(f"{name}: start and end must have visit time 0")
-
-    dist = np.hypot(x[:, None] - x[None, :], y[:, None] - y[None, :])
-    cost = build_cost_matrix(dist, visit)
-    return Instance(name, float(tmax), x, y, score, visit, dist, cost)
+    with np.errstate(invalid="ignore"):  # non-finite input is reported by validate_instance
+        dist = np.hypot(x[:, None] - x[None, :], y[:, None] - y[None, :])
+        cost = build_cost_matrix(dist, visit)
+    inst = Instance(name, float(tmax), x, y, score, visit, dist, cost)
+    validate_instance(inst)
+    return inst
 
 
 def load_instance(path):
-    """Read an instance file (see module docstring for the format)."""
-    path = Path(path)
-    lines = [line.split() for line in path.read_text().splitlines() if line.strip()]
+    """Read an instance file (see module docstring for the format).
 
-    header = lines[0]
-    tmax = float(header[0])
-    paths = int(header[1]) if len(header) > 1 else 1
-    if paths != 1:
-        raise ValueError(f"{path.name}: expected 1 path, got {paths}")
+    Raises InstanceError with the file name and line number if the file does
+    not follow the format or contains invalid values.
+    """
+    path = Path(path)
+    lines = [(no, line.split())
+             for no, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1)
+             if line.strip()]
+    if not lines:
+        raise InstanceError(f"{path.name}: file is empty")
+
+    def number(value, line_no, what, non_negative=False):
+        try:
+            result = float(value)
+        except ValueError:
+            raise InstanceError(f"{path.name}, line {line_no}: {what} must be a number, "
+                                f"got {value!r}") from None
+        if not math.isfinite(result):
+            raise InstanceError(f"{path.name}, line {line_no}: {what} must be finite, got {value!r}")
+        if non_negative and result < 0:
+            raise InstanceError(f"{path.name}, line {line_no}: {what} must be >= 0, got {value!r}")
+        return result
+
+    header_no, header = lines[0]
+    if len(header) not in (1, 2):
+        raise InstanceError(f"{path.name}, line {header_no}: header must be 'Tmax P', "
+                            f"got {' '.join(header)!r}")
+    tmax = number(header[0], header_no, "Tmax", non_negative=True)
+    if len(header) == 2 and number(header[1], header_no, "P") != 1:
+        raise InstanceError(f"{path.name}, line {header_no}: only single-path instances "
+                            f"(P = 1) are supported, got P = {header[1]}")
 
     rows = []
-    for fields in lines[1:]:
+    for line_no, fields in lines[1:]:
         if len(fields) not in (3, 4):
-            raise ValueError(f"{path.name}: expected 'x y S [v]', got {fields}")
-        x, y, s = map(float, fields[:3])
-        v = float(fields[3]) if len(fields) == 4 else 0.0
+            raise InstanceError(f"{path.name}, line {line_no}: expected 'x y S [v]', "
+                                f"got {' '.join(fields)!r}")
+        x = number(fields[0], line_no, "x")
+        y = number(fields[1], line_no, "y")
+        s = number(fields[2], line_no, "score S", non_negative=True)
+        v = number(fields[3], line_no, "visit time v", non_negative=True) if len(fields) == 4 else 0.0
         rows.append((x, y, s, v))
+    if len(rows) < 2:
+        raise InstanceError(f"{path.name}: need at least a start and an end point, "
+                            f"found {len(rows)} point(s)")
 
     # File order: start, end, attractions -> internal order: start, attractions, end.
     rows = [rows[0]] + rows[2:] + [rows[1]]
     x, y, score, visit = zip(*rows)
-    return make_instance(path.stem, tmax, x, y, score, visit)
+    try:
+        return make_instance(path.stem, tmax, x, y, score, visit)
+    except InstanceError as e:
+        # Report the file name (with extension) like the parsing errors above.
+        detail = str(e).removeprefix(f"{path.stem}: ")
+        raise InstanceError(f"{path.name}: {detail}") from None
 
 
 def save_instance(inst, path):
@@ -117,4 +195,4 @@ def save_instance(inst, path):
     for i in order:
         values = (inst.x[i], inst.y[i], inst.score[i], inst.visit[i])
         lines.append(" ".join(f"{v:.10g}" for v in values))
-    Path(path).write_text("\n".join(lines) + "\n")
+    Path(path).write_text("\n".join(lines) + "\n", encoding="utf-8")

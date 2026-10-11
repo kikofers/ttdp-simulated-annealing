@@ -24,13 +24,22 @@ Cooling: geometric, T <- alpha * T after every iteration. The initial and
 final temperatures are set so that the average sampled score loss is
 accepted with probability initial_accept and final_accept respectively;
 alpha = (T_end / T0) ** (1 / iterations) makes cooling span the budget.
+
+Error handling: parameters and the instance are validated before solving
+(ValueError / InstanceError with a clear message). The route length is
+tracked incrementally with deltas and recomputed every RESYNC_EVERY
+iterations so floating point error cannot accumulate. Before returning, the
+best route is re-evaluated from scratch; if it is infeasible or its score
+does not match, a RuntimeError is raised instead of returning a wrong result.
 """
 
 import argparse
 import math
 import random
+import sys
 import time
 from dataclasses import dataclass, field
+from numbers import Integral
 
 from src.evaluation import (
     FEASIBILITY_TOL,
@@ -43,9 +52,12 @@ from src.evaluation import (
     route_score,
     two_opt_delta,
 )
-from src.instance import load_instance
+from src.instance import load_instance, validate_instance
 
 MOVES = ("insert", "remove", "replace", "two_opt")
+
+# Recompute the tracked route length from scratch this often (iterations).
+RESYNC_EVERY = 10_000
 
 
 @dataclass
@@ -133,6 +145,23 @@ def estimate_mean_loss(route, score, unvisited, rng, samples=200):
     return sum(attraction_scores) / len(attraction_scores) if attraction_scores else 1.0
 
 
+def check_parameters(iterations, initial_accept, final_accept, move_weights, history_every):
+    """Raise ValueError if the SA parameters are meaningless."""
+    if not isinstance(iterations, Integral) or iterations < 1:
+        raise ValueError(f"iterations must be a positive integer, got {iterations!r}")
+    if not 0 < final_accept < initial_accept < 1:
+        raise ValueError("need 0 < final_accept < initial_accept < 1 so that the temperature "
+                         f"decreases, got initial_accept={initial_accept!r}, "
+                         f"final_accept={final_accept!r}")
+    if (len(move_weights) != len(MOVES)
+            or not all(math.isfinite(w) and w >= 0 for w in move_weights)
+            or sum(move_weights) == 0):
+        raise ValueError(f"move_weights needs {len(MOVES)} finite non-negative values "
+                         f"({', '.join(MOVES)}) with a positive sum, got {move_weights!r}")
+    if not isinstance(history_every, Integral) or history_every < 0:
+        raise ValueError(f"history_every must be a non-negative integer, got {history_every!r}")
+
+
 def simulated_annealing(inst, iterations=100_000, seed=0, initial_accept=0.5,
                         final_accept=0.001, move_weights=(1, 1, 1, 1), history_every=0):
     """Run SA on `inst` and return the best solution found (SAResult).
@@ -140,6 +169,9 @@ def simulated_annealing(inst, iterations=100_000, seed=0, initial_accept=0.5,
     history_every > 0 records (iteration, current score, best score) every
     that many iterations, for convergence plots.
     """
+    check_parameters(iterations, initial_accept, final_accept, move_weights, history_every)
+    validate_instance(inst)
+
     t_begin = time.perf_counter()
     rng = random.Random(seed)
     cost = inst.cost.tolist()   # list indexing is much faster than numpy in a Python loop
@@ -229,11 +261,18 @@ def simulated_annealing(inst, iterations=100_000, seed=0, initial_accept=0.5,
                     best_route, best_score, best_length = route[:], current_score, length
 
         temp *= alpha
+        if it % RESYNC_EVERY == 0:
+            length = route_length(cost, route)
         if history_every and it % history_every == 0:
             history.append((it, current_score, best_score))
 
+    # Final safety net: never return a route that does not check out.
     errors = route_errors(inst, best_route)
-    assert not errors, errors
+    actual_score = route_score(score, best_route)
+    if abs(actual_score - best_score) > 1e-6:
+        errors.append(f"tracked score {best_score} != actual score {actual_score}")
+    if errors:
+        raise RuntimeError(f"internal error in SA on {inst.name} (seed {seed}): {'; '.join(errors)}")
     return SAResult(
         route=best_route,
         score=best_score,
@@ -255,8 +294,11 @@ def main():
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
 
-    inst = load_instance(args.instance)
-    res = simulated_annealing(inst, iterations=args.iterations, seed=args.seed)
+    try:
+        inst = load_instance(args.instance)
+        res = simulated_annealing(inst, iterations=args.iterations, seed=args.seed)
+    except (OSError, ValueError) as e:  # InstanceError is a ValueError
+        sys.exit(f"error: {e}")
     print(f"instance   {inst.name} (n={inst.n}, Tmax={inst.tmax:g})")
     print(f"score      {res.score:g}  (greedy start {res.initial_score:g})")
     print(f"length     {res.length:.3f}")
